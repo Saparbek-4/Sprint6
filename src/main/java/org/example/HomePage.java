@@ -5,8 +5,10 @@ import org.openqa.selenium.WebDriver;
 
 public class HomePage extends BasePage {
 
-    private final String FAQ_BUTTON_PATTERN = "//div[@data-accordion-component='AccordionItemButton' and contains(text(), '%s')]";
-    private final String FAQ_ANSWER_PATTERN = "//div[@data-accordion-component='AccordionItemPanel']//p[contains(text(), '%s')]";
+    private static final String FAQ_BUTTON_BY_INDEX_PATTERN =
+            "(//div[@data-accordion-component='AccordionItemButton'])[%d]";
+    private static final String FAQ_ANSWER_BY_INDEX_PATTERN =
+            "(//div[@data-accordion-component='AccordionItemPanel'])[%d]";
 
     private final By TOP_ORDER_BUTTON_LOCATOR = By.xpath(".//div[contains(@class, 'Header_Nav')]//button[text()='Заказать']");
     private final By DOWN_ORDER_BUTTON_LOCATOR = By.xpath(".//div[contains(@class, 'Home_FinishButton')]//button[text()='Заказать']");
@@ -18,23 +20,32 @@ public class HomePage extends BasePage {
     private final By SCOOTER_LOGO_LOCATOR = By.xpath("//img[@alt='Scooter']");
     private final By YANDEX_LOGO_LOCATOR = By.xpath("//img[@alt='Yandex']");
 
+    private static final By COOKIE_ACCEPT_BUTTON_LOCATOR = By.id("rcc-confirm-button");
+
     public HomePage(WebDriver driver) {
         super(driver);
     }
 
-    public void clickByText(String text) {
-        By button = By.xpath(String.format(FAQ_BUTTON_PATTERN, text));
+    public void acceptCookiesIfVisible() {
+        if (isDisplayed(COOKIE_ACCEPT_BUTTON_LOCATOR, BasePage.SHORT_TIMEOUT)) {
+            click(COOKIE_ACCEPT_BUTTON_LOCATOR);
+        }
+    }
+
+    public void openFaqQuestion(int index) {
+        acceptCookiesIfVisible();
+        By button = By.xpath(String.format(FAQ_BUTTON_BY_INDEX_PATTERN, index + 1));
         scrollToElement(button);
         click(button);
     }
 
-    public String getFaqAnswer(String text) {
-        By answer = By.xpath(String.format(FAQ_ANSWER_PATTERN, text));
-        scrollToElement(answer);
-        return getText(answer);
+    public String getFaqAnswer(int index) {
+        By answerPanel = By.xpath(String.format(FAQ_ANSWER_BY_INDEX_PATTERN, index + 1));
+        return getText(answerPanel);
     }
 
     public void clickOrderButton(String placement) {
+        acceptCookiesIfVisible();
         if (placement.equals("UP")) {
             click(TOP_ORDER_BUTTON_LOCATOR);
         } else if (placement.equals("DOWN")) {
@@ -51,10 +62,12 @@ public class HomePage extends BasePage {
     }
 
     public void clickLogo(String name) {
-        if (name.equals("Scooter"))  {
+        if ("Scooter".equals(name)) {
             click(SCOOTER_LOGO_LOCATOR);
-        } else {
+        } else if ("Yandex".equals(name)) {
             click(YANDEX_LOGO_LOCATOR);
+        } else {
+            throw new IllegalArgumentException("Unsupported logo name: " + name);
         }
     }
 }

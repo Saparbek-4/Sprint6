@@ -1,6 +1,11 @@
 package org.example;
 
-import org.openqa.selenium.*;
+import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.Keys;
+import org.openqa.selenium.TimeoutException;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
@@ -9,12 +14,15 @@ import java.util.List;
 
 public class BasePage {
 
+    protected static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(10);
+    protected static final Duration SHORT_TIMEOUT = Duration.ofSeconds(5);
+
     protected WebDriver driver;
     protected WebDriverWait wait;
 
     public BasePage(WebDriver driver) {
         this.driver = driver;
-        this.wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        this.wait = new WebDriverWait(driver, DEFAULT_TIMEOUT);
     }
 
     protected List<WebElement> findAll(By locator) {
@@ -25,7 +33,7 @@ public class BasePage {
         wait.until(ExpectedConditions.elementToBeClickable(locator)).click();
     }
 
-    public void type(By locator, String text, org.openqa.selenium.Keys... keysToSend) {
+    public void type(By locator, String text, Keys... keysToSend) {
         WebElement element = wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
         element.clear();
         element.sendKeys(text);
@@ -33,18 +41,23 @@ public class BasePage {
         if (keysToSend != null && keysToSend.length > 0) {
             element.sendKeys(keysToSend);
         }
-
     }
 
     protected void scrollToElement(By locator) {
-        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView();", driver.findElement(locator));
+        WebElement element = wait.until(ExpectedConditions.presenceOfElementLocated(locator));
+        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView();", element);
     }
 
     protected boolean isDisplayed(By locator) {
+        return isDisplayed(locator, DEFAULT_TIMEOUT);
+    }
+
+    protected boolean isDisplayed(By locator, Duration timeout) {
         try {
-            wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+            new WebDriverWait(driver, timeout)
+                    .until(ExpectedConditions.visibilityOfElementLocated(locator));
             return true;
-        } catch (Exception e) {
+        } catch (TimeoutException e) {
             return false;
         }
     }
@@ -68,11 +81,8 @@ public class BasePage {
         String originalWindow = driver.getWindowHandle();
         clickAction.run();
 
-        // waiting for a new tab to open
-        new WebDriverWait(driver, Duration.ofSeconds(5))
-                .until(ExpectedConditions.numberOfWindowsToBe(2));
+        wait.until(ExpectedConditions.numberOfWindowsToBe(2));
 
-        // switching to a new window
         for (String windowHandle : driver.getWindowHandles()) {
             if (!originalWindow.equals(windowHandle)) {
                 driver.switchTo().window(windowHandle);
@@ -82,8 +92,6 @@ public class BasePage {
     }
 
     public void waitForUrlContains(String expectedUrlPart) {
-        new WebDriverWait(driver, Duration.ofSeconds(5))
-                .until(ExpectedConditions.urlContains(expectedUrlPart));
+        wait.until(ExpectedConditions.urlContains(expectedUrlPart));
     }
-
 }

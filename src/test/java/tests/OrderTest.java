@@ -1,91 +1,86 @@
 package tests;
 
 import org.example.HomePage;
-import org.example.OrderPage;
+import org.example.OrderPersonPage;
+import org.example.OrderRentPage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-
-import java.util.stream.Stream;
+import testdata.OrderTestData;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class OrderTest extends BaseTest {
-    public static Stream<Arguments> positiveOrderProvider() {
-        return Stream.of(
-                Arguments.of("UP", "Иван", "Иванов", "Москва, ул. Ленина, 1", "Черкизовская", "+79991112233", "2027-06-01", "сутки", "чёрный жемчуг"),
-                Arguments.of("DOWN", "Пётр", "Петров", "Москва, ул. Пушкина, 10", "Сокольники", "+79992223344", "2028-12-12", "двое суток", "серая безысходность")
-        );
-    }
-
-    public static Stream<Arguments> negativePersonDetailsProvider() {
-        return Stream.of(
-                Arguments.of("* Имя", "1", "Введите корректное имя"),
-                Arguments.of("* Фамилия", "2", "Введите корректную фамилию"),
-                Arguments.of("* Адрес: куда привезти заказ", "3", "Введите корректный адрес"),
-                Arguments.of("* Станция метро", "", "Выберите станцию"),
-                Arguments.of("* Телефон: на него позвонит курьер", "5", "Введите корректный номер")
-        );
-    }
 
     @ParameterizedTest
-    @MethodSource("positiveOrderProvider")
+    @MethodSource("testdata.OrderTestData#positiveOrderProvider")
     public void shouldCompleteOrderSuccessfully(String buttonPlacement, String name, String surname,
                                                 String address, String metro, String phone,
                                                 String bringDate, String period, String color) {
         HomePage homePage = new HomePage(driver);
         homePage.clickOrderButton(buttonPlacement);
 
-        OrderPage orderPage = new OrderPage(driver);
-        orderPage.fillOrderForm(name, surname, address, metro, phone, bringDate, period, color);
+        OrderPersonPage orderPersonPage = new OrderPersonPage(driver);
+        orderPersonPage.fillPersonDetails(name, surname, address, metro, phone);
+
+        OrderRentPage orderRentPage = orderPersonPage.clickNextButton();
+        orderRentPage.fillRentDetails(bringDate, period, color);
+
+        assertEquals(bringDate, orderRentPage.getBringDateValue(),
+                "В поле даты доставки должно быть записано значение в формате dd.MM.yyyy");
+
+        orderRentPage.clickOrderButton();
+        orderRentPage.confirmOrder();
+
+        assertTrue(orderRentPage.isOrderSuccessModalDisplayed(),
+                "Окно об успешном создании заказа не отобразилось");
     }
 
     @ParameterizedTest
-    @MethodSource("negativePersonDetailsProvider")
-    public void shouldShowValidationErrorsWhenPersonDetailFieldsIsInvalid(String placeholder, String input, String expectedErrorMessage) {
-        // Шаги негативного теста валидации
+    @MethodSource("testdata.OrderTestData#negativePersonDetailsProvider")
+    public void shouldShowValidationErrorsWhenPersonDetailFieldsIsInvalid(String placeholder, String input,
+                                                                          String expectedErrorMessage) {
         HomePage homePage = new HomePage(driver);
-        homePage.clickOrderButton("UP");
+        homePage.clickOrderButton(OrderTestData.DEFAULT_ORDER_BUTTON);
 
-        OrderPage orderPage = new OrderPage(driver);
-        // для метро свой метод, для остальных общий
-        if (placeholder.contains("метро")) {
-            orderPage.enterInvalidMetro(input);
-        } else {
-            orderPage.enterInvalidField(orderPage.getLocatorByPlaceholder(placeholder), input);
-        }
+        OrderPersonPage orderPersonPage = new OrderPersonPage(driver);
+        orderPersonPage.enterInvalidField(placeholder, input);
 
-        String actual = orderPage.getErrorMessageForField(placeholder);
-
+        String actual = orderPersonPage.getErrorMessageForField(placeholder);
         assertEquals(expectedErrorMessage, actual);
-
     }
 
     @Test
-    // Couldn't be passed. Because it allows outdated dates
+    // Известный баг приложения: форма позволяет оформить заказ с прошедшей датой
     public void shouldNotAllowOrderWithPastDeliveryDate() {
-        // Шаги негативного теста валидации
-        HomePage homePage = new HomePage(driver);
-        homePage.clickOrderButton("UP");
+        OrderRentPage orderRentPage = getOrderRentPage();
+        String yesterdayDate = OrderTestData.yesterdayDate();
+        orderRentPage.fillRentDetails(yesterdayDate, OrderTestData.DEFAULT_PERIOD, OrderTestData.DEFAULT_COLOR);
 
-        OrderPage orderPage = new OrderPage(driver);
-        orderPage.fillPersonDetails("Иван", "Иванов", "Москва, ул. Ленина, 1", "Черкизовская", "+79991112233");
-        orderPage.clickNextButton();
+        assertEquals(yesterdayDate, orderRentPage.getBringDateValue(),
+                "В поле даты доставки должно быть записано вчерашнее число в формате dd.MM.yyyy");
 
-        // Generating passed date
-        String yesterdayDate = java.time.LocalDate.now()
-                .minusDays(1)
-                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy.MM.dd"));
+        orderRentPage.clickOrderButton();
 
-
-        orderPage.fillRentDetails(yesterdayDate, "сутки", "чёрный жемчуг");
-        orderPage.clickOrderButton();
-
-        // Confirm order button shouldn't be displayed
-        assertFalse(orderPage.isConfirmOrderButtonDisplayed(),
+        assertFalse(orderRentPage.isConfirmOrderButtonDisplayed(),
                 "Заказ не должен оформляться при указании прошедшей даты доставки: " + yesterdayDate);
     }
 
+    private OrderRentPage getOrderRentPage() {
+        HomePage homePage = new HomePage(driver);
+        homePage.clickOrderButton(OrderTestData.DEFAULT_ORDER_BUTTON);
+
+        OrderPersonPage orderPersonPage = new OrderPersonPage(driver);
+        orderPersonPage.fillPersonDetails(
+                OrderTestData.DEFAULT_NAME,
+                OrderTestData.DEFAULT_SURNAME,
+                OrderTestData.DEFAULT_ADDRESS,
+                OrderTestData.DEFAULT_METRO,
+                OrderTestData.DEFAULT_PHONE
+        );
+
+        return orderPersonPage.clickNextButton();
+    }
 }

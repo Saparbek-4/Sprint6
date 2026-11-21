@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.saparbek</groupId>
-    <artifactId>Sprint_5</artifactId>
+    <artifactId>Sprint_6</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
@@ -13,9 +13,7 @@
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <junit.jupiter.version>5.12.1</junit.jupiter.version>
-        <mockito.version>5.17.0</mockito.version>
         <seleniumhq.selenium>4.31.0</seleniumhq.selenium>
-        <github.bonigarcia>6.1.0</github.bonigarcia>
         <apache.maven.plugins>3.2.5</apache.maven.plugins>
     </properties>
 
@@ -29,30 +27,11 @@
         </dependency>
 
         <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-params</artifactId>
-            <version>${junit.jupiter.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-junit-jupiter</artifactId>
-            <version>${mockito.version}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
             <groupId>org.seleniumhq.selenium</groupId>
             <artifactId>selenium-java</artifactId>
             <version>${seleniumhq.selenium}</version>
         </dependency>
 
-        <dependency>
-            <groupId>io.github.bonigarcia</groupId>
-            <artifactId>webdrivermanager</artifactId>
-            <version>${github.bonigarcia}</version>
-        </dependency>
     </dependencies>
 
     <build>
@@ -62,7 +41,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${apache.maven.plugins}</version>
                 <configuration>
-                    <argLine>@{argLine} -Dnet.bytebuddy.experimental=true</argLine>
+                    <argLine>-Dnet.bytebuddy.experimental=true</argLine>
                 </configuration>
             </plugin>
         </plugins>
